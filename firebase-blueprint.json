@@ -1,0 +1,139 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Private user account and DPDP consent preferences",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 256 },
+        "displayName": { "type": "string", "maxLength": 30 },
+        "avatarId": { "type": "string", "maxLength": 50 },
+        "isAdult": { "type": "boolean" },
+        "isPremium": { "type": "boolean" },
+        "tier": { "type": "string", "enum": ["free", "barista", "head_barista", "master_barista"] },
+        "amountPaid": { "type": "number" },
+        "passExpiresAt": { "type": "string" },
+        "role": { "type": "string", "enum": ["user", "owner", "admin"] },
+        "country": { "type": "string", "maxLength": 80 },
+        "phoneNumber": { "type": "string", "maxLength": 30 },
+        "fcmToken": { "type": "string", "maxLength": 512 },
+        "consents": { "type": "object" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "email", "isAdult", "role"]
+    },
+    "LeaderboardEntry": {
+      "title": "LeaderboardEntry",
+      "description": "Public barista leaderboard card and crown bidding entry",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "displayName": { "type": "string", "maxLength": 30 },
+        "amount": { "type": "number" },
+        "tier": { "type": "string", "enum": ["barista", "head_barista", "master_barista"] },
+        "linkTitle": { "type": "string", "maxLength": 20 },
+        "linkUrl": { "type": "string", "maxLength": 200 },
+        "avatarUrl": { "type": "string", "maxLength": 1000 },
+        "avatarId": { "type": "string", "maxLength": 50 },
+        "showOnLeaderboard": { "type": "boolean" },
+        "paidAt": { "type": "string" },
+        "expiresAt": { "type": "string" },
+        "hidden": { "type": "boolean" }
+      },
+      "required": ["userId", "displayName", "amount", "tier", "showOnLeaderboard", "paidAt", "expiresAt"]
+    },
+    "Recipe": {
+      "title": "Recipe",
+      "description": "Curated coffee brewing recipe with steps and taste profile",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 120 },
+        "coffeeType": { "type": "string", "maxLength": 50 },
+        "method": { "type": "string", "enum": ["espresso machine", "French press", "AeroPress", "moka pot", "V60"] },
+        "difficulty": { "type": "string", "enum": ["Beginner", "Intermediate", "Advanced", "Master"] },
+        "prepTimeMins": { "type": "number" },
+        "ingredients": { "type": "array" },
+        "steps": { "type": "array" },
+        "servings": { "type": "number" },
+        "tasteProfile": { "type": "string", "maxLength": 150 },
+        "isFree": { "type": "boolean" }
+      },
+      "required": ["id", "title", "coffeeType", "method", "difficulty", "prepTimeMins", "ingredients", "steps", "servings", "tasteProfile", "isFree"]
+    },
+    "BroadcastNotification": {
+      "title": "BroadcastNotification",
+      "description": "Push notification sent by owner to subscribed users",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "title": { "type": "string", "maxLength": 50 },
+        "message": { "type": "string", "maxLength": 150 },
+        "link": { "type": "string", "maxLength": 200 },
+        "audience": { "type": "string", "enum": ["all", "premium", "free"] },
+        "sentCount": { "type": "number" },
+        "failedCount": { "type": "number" },
+        "sentBy": { "type": "string", "maxLength": 128 },
+        "sentAt": { "type": "string" }
+      },
+      "required": ["id", "title", "message", "audience", "sentBy", "sentAt"]
+    },
+    "ContentReport": {
+      "title": "ContentReport",
+      "description": "User flagged content for community safety review",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "targetType": { "type": "string", "enum": ["name", "link", "photo"] },
+        "targetUserId": { "type": "string", "maxLength": 128 },
+        "targetContent": { "type": "string", "maxLength": 300 },
+        "reason": { "type": "string", "maxLength": 300 },
+        "reportedBy": { "type": "string", "maxLength": 128 },
+        "status": { "type": "string", "enum": ["pending", "resolved", "dismissed"] },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["id", "targetType", "targetUserId", "reason", "reportedBy", "status", "createdAt"]
+    },
+    "RecipeRating": {
+      "title": "RecipeRating",
+      "description": "User star rating (1-5 stars) for brewed coffee recipes",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "recipeId": { "type": "string", "maxLength": 128 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "rating": { "type": "number" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["id", "recipeId", "userId", "rating", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "Private user account document"
+    },
+    "/leaderboard/{userId}": {
+      "schema": "LeaderboardEntry",
+      "description": "Public opt-in barista ranking entry"
+    },
+    "/recipes/{recipeId}": {
+      "schema": "Recipe",
+      "description": "Coffee recipes"
+    },
+    "/broadcasts/{broadcastId}": {
+      "schema": "BroadcastNotification",
+      "description": "Push notification audit log"
+    },
+    "/reports/{reportId}": {
+      "schema": "ContentReport",
+      "description": "Moderation reports"
+    },
+    "/ratings/{ratingId}": {
+      "schema": "RecipeRating",
+      "description": "Community star ratings for coffee recipes"
+    }
+  }
+}

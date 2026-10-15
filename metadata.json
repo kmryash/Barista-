@@ -1,0 +1,6 @@
+{
+  "name": "BrewBook - Coffee Recipes & Barista Leaderboard",
+  "description": "Discover curated specialty coffee recipes, brew like a pro, and compete in the Favorite Barista bidding game.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

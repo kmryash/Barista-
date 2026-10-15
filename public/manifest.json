@@ -1,0 +1,21 @@
+{
+  "short_name": "BrewBook",
+  "name": "BrewBook - Specialty Coffee & Barista League",
+  "icons": [
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192' fill='%23C68642'><rect width='192' height='192' rx='40' fill='%233B2418'/><path d='M40 70v70a16 16 0 0 0 16 16h80a16 16 0 0 0 16-16V70H40zm96 4h16a16 16 0 0 1 16 16v16a16 16 0 0 1-16 16h-16V74z' fill='%23F2B84B'/></svg>",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512' fill='%23C68642'><rect width='512' height='512' rx='100' fill='%233B2418'/><path d='M100 180v200a40 40 0 0 0 40 40h232a40 40 0 0 0 40-40V180H100zm272 10h40a40 40 0 0 1 40 40v40a40 40 0 0 1-40 40h-40V190z' fill='%23F2B84B'/></svg>",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    }
+  ],
+  "start_url": "/",
+  "background_color": "#FFF6E9",
+  "theme_color": "#3B2418",
+  "display": "standalone",
+  "orientation": "portrait"
+}

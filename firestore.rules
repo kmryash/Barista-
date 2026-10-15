@@ -1,0 +1,143 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() > 0 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        (request.auth.token.email in ['kmryash09@gmail.com', 'kmryashsingh09@gmail.com']) ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    // Admins collection
+    match /admins/{adminId} {
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // Users Collection (PII isolation)
+    match /users/{userId} {
+      allow get: if isOwner(userId) || isAdmin();
+      allow list: if isAdmin();
+
+      // Users can create their own profile during sign-up or Google first sign-in
+      allow create: if (isOwner(userId)
+        && incoming().id == userId
+        && incoming().email is string && incoming().email.size() <= 256
+        && (incoming().role == 'user' || (isAdmin() && incoming().role in ['user', 'owner', 'admin']))
+        && (incoming().isPremium == false || incoming().isPremium == null || isAdmin()))
+        || isAdmin();
+
+      // Users can update profile fields, DPDP consents, FCM token, and Barista Pass details (isPremium, tier, amountPaid, passExpiresAt)
+      // Users CANNOT escalate their role or change id/email
+      allow update: if (isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'displayName', 'country', 'phoneNumber', 'avatarId', 'fcmToken',
+          'consents', 'updatedAt', 'isAdult', 'isPremium', 'tier',
+          'amountPaid', 'passExpiresAt'
+        ])
+        && (incoming().displayName == null || (incoming().displayName is string && incoming().displayName.size() <= 30))
+        && (incoming().country == null || (incoming().country is string && incoming().country.size() <= 80))
+        && (incoming().phoneNumber == null || (incoming().phoneNumber is string && incoming().phoneNumber.size() <= 30))
+        && (incoming().avatarId == null || (incoming().avatarId is string && incoming().avatarId.size() <= 50))
+        && (incoming().fcmToken == null || (incoming().fcmToken is string && incoming().fcmToken.size() <= 512))
+        && (incoming().isPremium == null || incoming().isPremium is bool)
+        && (incoming().tier == null || incoming().tier in ['free', 'barista', 'head_barista', 'master_barista'])
+        && (incoming().amountPaid == null || (incoming().amountPaid is number && incoming().amountPaid >= 0))
+        && (incoming().passExpiresAt == null || (incoming().passExpiresAt is string && incoming().passExpiresAt.size() <= 60))
+        && incoming().role == existing().role
+        && incoming().id == existing().id
+        && incoming().email == existing().email
+      )) || isAdmin();
+
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Leaderboard Collection (Public opt-in Barista Hall of Fame)
+    match /leaderboard/{userId} {
+      allow read: if resource.data.showOnLeaderboard == true || isOwner(userId) || isAdmin();
+
+      // Updates: Baristas can update their public link, avatar, tier, amount, rank info
+      allow update: if (isOwner(userId) && (
+        incoming().diff(existing()).affectedKeys().hasOnly([
+          'userId', 'displayName', 'amount', 'tier', 'linkTitle', 'linkUrl',
+          'avatarUrl', 'avatarId', 'showOnLeaderboard', 'paidAt', 'expiresAt', 'hidden'
+        ])
+        && (incoming().displayName == null || (incoming().displayName is string && incoming().displayName.size() <= 30))
+        && (incoming().linkTitle == null || (incoming().linkTitle is string && incoming().linkTitle.size() <= 20))
+        && (incoming().linkUrl == null || (incoming().linkUrl is string && incoming().linkUrl.size() <= 200 && incoming().linkUrl.matches('^https://.+')))
+        && (incoming().avatarUrl == null || (incoming().avatarUrl is string && incoming().avatarUrl.size() <= 1000))
+        && (incoming().avatarId == null || (incoming().avatarId is string && incoming().avatarId.size() <= 50))
+        && (incoming().amount == null || (incoming().amount is number && incoming().amount >= 0))
+        && (incoming().tier == null || incoming().tier in ['barista', 'head_barista', 'master_barista'])
+        && incoming().showOnLeaderboard is bool
+      )) || isAdmin();
+
+      allow create, delete: if isAdmin() || isOwner(userId);
+    }
+
+    // Recipes Collection
+    match /recipes/{recipeId} {
+      allow read: if true;
+
+      allow create, update: if isAdmin()
+        && incoming().title is string && incoming().title.size() > 0 && incoming().title.size() <= 120
+        && incoming().isFree is bool
+        && incoming().steps is list
+        && incoming().ingredients is list;
+
+      allow delete: if isAdmin();
+    }
+
+    // Broadcasts (Audit log for FCM web push by Owner)
+    match /broadcasts/{broadcastId} {
+      allow read, write: if isAdmin();
+    }
+
+    // Reports (Community safety moderation)
+    match /reports/{reportId} {
+      allow create: if isSignedIn()
+        && incoming().keys().hasAll(['id', 'targetType', 'targetUserId', 'reason', 'reportedBy', 'status', 'createdAt'])
+        && incoming().reportedBy == request.auth.uid
+        && incoming().reason is string && incoming().reason.size() <= 300
+        && incoming().status == 'pending';
+
+      allow read, update, delete: if isAdmin();
+    }
+
+    // Community Recipe Ratings (1 to 5 stars)
+    match /ratings/{ratingId} {
+      allow read: if true;
+      allow create, update: if isSignedIn()
+        && incoming().keys().hasAll(['id', 'recipeId', 'userId', 'rating', 'updatedAt'])
+        && incoming().userId == request.auth.uid
+        && incoming().rating is number && incoming().rating >= 1 && incoming().rating <= 5;
+      allow delete: if (isSignedIn() && resource.data.userId == request.auth.uid) || isAdmin();
+    }
+  }
+}
